@@ -4,7 +4,7 @@
    
     mkdir -p ~/catkin_SC-A-LOAM_ws/src
     cd ~/catkin_SC-A-LOAM_ws/src
-    git clone https://github.com/gisbi-kim/SC-A-LOAM.git
+    git clone https://github.com/Ohdonghoon00/SC-A-LOAM.git
     cd ../
     catkin_make
     source ~/catkin_scaloam_ws/devel/setup.bash
