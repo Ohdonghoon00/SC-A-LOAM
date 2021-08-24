@@ -1,5 +1,5 @@
 # SC-A-LOAM
-- install
+### install
 
     ```bash
     mkdir -p ~/catkin_SC-A-LOAM_ws/src
@@ -11,20 +11,20 @@
     ```
 
 - `Publish_lidar_data.launch` 파일내 data_dir 경로 수정
-- data 구조
+### data 구조
 
     ```bash
     data_dir
-    			├─ timestamp 
-    						└─ lidar_timestamp.csv 			
-    			├─ lidar_binary_file 	
-    						├─ 00000.xyz
-    						├─ 00001.xyz
-    						└─ ...						
-    			└─ multipleye_lidar_data.bag
+    	├─ timestamp 
+    			└─ lidar_timestamp.csv 			
+    	├─ lidar_binary_file 	
+    			├─ 00000.xyz
+    			├─ 00001.xyz
+    			└─ ...						
+    	└─ multipleye_lidar_data.bag
     ```
 
-- run
+### run
 
     ```bash
     roslaunch aloam_velodyne aloam_velodyne_VLP_16.launch
