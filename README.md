@@ -15,9 +15,8 @@
 
     
     data_dir
-    ├─ timestamp 
-    	└─ lidar_timestamp.csv 			
-    ├─ lidar_binary_file 	
+    ├─ lidar_timestamp.csv 			
+    ├─ lidar1	
     	├─ 00000.xyz
     	├─ 00001.xyz
     	└─ ...						
