@@ -16,7 +16,7 @@
 #include <pcl/common/point_operators.h>
 #include <pcl/common/io.h>
 #include <pcl/search/organized.h>
-#include <pcl/search/octree.h> 
+#include <pcl/search/octree.h>
 #include <pcl/search/kdtree.h>
 #include <pcl/features/normal_3d_omp.h>
 #include <pcl/filters/conditional_removal.h>
@@ -69,8 +69,7 @@ struct LidarData
     uint8_t* azimuth_idxs_ptr() const { return intensities_ptr() + num_points; }
     float* azimuth_degs_ptr() const { return (float*) (azimuth_idxs_ptr() + num_points); }
     
-    
-    // Eigen::Map<Matrix3Xf> points() const { return Eigen::Map<Matrix3Xf>(points_ptr(), 3, num_points); }
+     
 
 };
 
@@ -115,11 +114,11 @@ int main(int argc, char **argv)
 
     // publish delay
     ros::Rate r(10.0 / publish_delay);
-
+    ros::Rate r_(760);
 
     
     // timestamp.csv path
-    std::string csv_path = data_dir + "timestamp/lidar_timestamp.csv";
+    std::string csv_path = data_dir + "lidar_timestamp.csv";
     std::ifstream csv_file(csv_path, std::ifstream::in);
 
     if(!csv_file.is_open())
@@ -155,7 +154,7 @@ int main(int argc, char **argv)
         
         // binary data path
         std::stringstream Lidar_binary_path;
-        Lidar_binary_path << data_dir + "lidar_binary_file/" << std::setfill('0') << std::setw(5) << fidx << ".xyz";
+        Lidar_binary_path << data_dir + "lidar1/" << std::setfill('0') << std::setw(5) << fidx << ".xyz";
         
         std::ifstream ifs(Lidar_binary_path.str(), std::ifstream::in);
         
@@ -173,14 +172,16 @@ int main(int argc, char **argv)
         points.clear();
         points.reserve(kMaxNumberOfPoints);
         
+        std::cout << " File number : " << fidx << "     ";
+        
         // read binary data file
         int num_seqs = 0;
         ifs.read((char*)&num_seqs, sizeof(int));
         for (int j = 0; j < num_seqs; j++)
         {
+
             
-            std::cout << " File number : " << fidx << std::endl;
-            std::cout << " num_seqs : " << j << std::endl;
+            // std::cout << " num_seqs : " << j << std::endl;
 
             
             pcl::PointXYZI point;
@@ -212,7 +213,7 @@ int main(int argc, char **argv)
                 point.x = *(lidar_data.points_ptr() + k);
                 point.y = *(lidar_data.points_ptr() + k + 1);
                 point.z = *(lidar_data.points_ptr() + k + 2);
-                point.intensity = (((float)*( lidar_data.intensities_ptr() + (k/3) ) ) / 255); // 0 ~ 1 , raw data : 0 ~ 254
+                // point.intensity = (((float)*( lidar_data.intensities_ptr() + (k/3) ) ) / 255); // 0 ~ 1 , raw data : 0 ~ 254
                 points.push_back(point);
             }
             
@@ -220,23 +221,26 @@ int main(int argc, char **argv)
 
         }
 
-            // timestamp
-            ros::Time timestamp_ros;
-            timestamp_ros.fromNSec(lidar_data.timestamp_ns);
-            std::cout << timestamp_ros << std::endl;
+        std::cout << " points num :  " << points.size() << "    ";
 
-            // publish
-            sensor_msgs::PointCloud2 output;
-            pcl::toROSMsg(points, output);
-            output.header.stamp = timestamp_ros;
-            output.header.frame_id = "/camera_init";
-            pubLaserCloud.publish(output);
+        // timestamp
+        ros::Time timestamp_ros;
+        timestamp_ros.fromNSec(lidar_data.timestamp_ns);
+        std::cout << timestamp_ros << std::endl;
+
+        // publish
+        sensor_msgs::PointCloud2 output;
+        pcl::toROSMsg(points, output);
+        output.header.stamp = timestamp_ros;
+        output.header.frame_id = "/camera_init";
+        pubLaserCloud.publish(output);
             
-            // bagfile
-            if( to_bag ) bag.write("/velodyne_points", timestamp_ros, output);
+        // bagfile
+        if( to_bag ) bag.write("/velodyne_points", timestamp_ros, output);
 
-            r.sleep();
-            ifs.close();
+
+        r.sleep();
+        ifs.close();
 
         line_num++;    
     }
