@@ -118,12 +118,22 @@ int main(int argc, char **argv)
 
     
     // timestamp.csv path
-    std::string csv_path = data_dir + "lidar_timestamp.csv";
-    std::ifstream csv_file(csv_path, std::ifstream::in);
+    std::string LidarcsvPath = data_dir + "lidar_timestamp.csv";
+    std::ifstream LidarcsvFile(LidarcsvPath, std::ifstream::in);
 
-    if(!csv_file.is_open())
+    if(!LidarcsvFile.is_open())
     {
-        std::cout << " csv file failed to open " << std::endl;
+        std::cout << " Lidar csv file failed to open " << std::endl;
+        return EXIT_FAILURE;
+    }
+    
+    // lidar csv path
+    std::string IMUcsvPath = data_dir + "imu_data.csv";
+    std::ifstream IMUcsvFile(IMUcsvPath, std::ifstream::in);
+
+    if(!IMUcsvFile.is_open())
+    {
+        std::cout << " IMU csv file failed to open " << std::endl;
         return EXIT_FAILURE;
     }
 
@@ -131,7 +141,7 @@ int main(int argc, char **argv)
     int line_num = 0;
     
     // read timestamp.csv
-    while(std::getline(csv_file, line) && ros::ok())
+    while(std::getline(LidarcsvFile, line) && ros::ok())
     {
         if(line_num == 0) 
         {
@@ -205,7 +215,8 @@ int main(int argc, char **argv)
             ifs.read((char*) &lidar_data.num_channels, sizeof(uint8_t));
             ifs.read((char*) &lidar_data.timestamp_ns, sizeof(int64_t));
 
-            
+            // IMU data publish
+
             
             // save 3D points and intensity 
             for(int k = 0; k < num_pts * 3; k+=3)
@@ -245,7 +256,7 @@ int main(int argc, char **argv)
         line_num++;    
     }
 
-    csv_file.close();
+    LidarcsvFile.close();
     bag.close();
     
     printf("XYZ_binary to rosbag done\n");
