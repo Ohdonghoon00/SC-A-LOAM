@@ -1,0 +1,19 @@
+<launch>
+    
+   
+    
+    <node name="VisualizePointCloud" pkg="aloam_velodyne" type="VisualizePointCloud" output="screen"> 
+        <param name="data_dir" type="string" value="/home/multipleye/Dataset/201014_skt_3f_night_lidar/" />   <!--replace with your data dir -->
+        <param name="publish_delay" type="int" value="1" />                                     <!-- 1 : 10hz , 2: 5hz -->
+    </node>
+    
+    
+    <!-- visulaization -->
+    <arg name="rviz" default="true" />
+    <group if="$(arg rviz)">
+        <node launch-prefix="nice" pkg="rviz" type="rviz" name="rviz" args="-d $(find aloam_velodyne)/rviz_cfg/aloam_velodyne.rviz" />
+    </group>
+
+
+
+</launch>

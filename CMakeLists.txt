@@ -75,5 +75,7 @@ target_link_libraries(kittiHelper ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${OpenCV_
 add_executable(PublishLidarData src/PublishLidarData.cpp)
 target_link_libraries(PublishLidarData glog ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${OpenCV_LIBS})
 
+add_executable(VisualizePointCloud src/VisualizePointCloud.cpp)
+target_link_libraries(VisualizePointCloud glog ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${OpenCV_LIBS})
 
 

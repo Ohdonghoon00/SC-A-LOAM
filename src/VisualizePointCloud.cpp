@@ -1,3 +1,6 @@
+
+
+
 #include <iostream>
 #include <fstream>
 #include <iomanip>
@@ -42,13 +45,9 @@
 
 
 
-ros::Publisher pubLaserCloud;
 
 
-using namespace pcl;
-using namespace std;
-
-namespace po = boost::program_options;
+ros::Publisher LaserCloud;
 
 struct LidarData 
 {
@@ -73,104 +72,41 @@ struct LidarData
 
 };
 
-// Eigen::Matrix3d GyroToRotation(std::vector<double> gyro)
-// {
-//     double t = 0.005;
-    
-
-// }
 
 
 int main(int argc, char **argv) 
 {
 
-    ros::init(argc, argv, "Publish_lidar_data");
+    ros::init(argc, argv, "Visualize_PointCloud");
     ros::NodeHandle nh("~");
-    
+
     LidarData lidar_data;
     
-    rosbag::Bag bag;
     
-    bool to_bag;
-    std::string data_dir, output_bag_file;
+    std::string data_dir;
     int publish_delay;
     nh.getParam("data_dir", data_dir);
-    nh.getParam("to_bag", to_bag);
     nh.getParam("publish_delay", publish_delay);
     
-    // bagfile
-    if (to_bag)
-    {
-        nh.getParam("output_bag_file", output_bag_file);
-        bag.open(data_dir + output_bag_file, rosbag::bagmode::Write);
-    }
-    
-    pubLaserCloud = nh.advertise<sensor_msgs::PointCloud2>("/velodyne_points", 2);
+    LaserCloud = nh.advertise<sensor_msgs::PointCloud2>("/aft_pgo_map", 100);
 
     // publish delay
     ros::Rate r(10.0 / publish_delay);
-    // ros::Rate r_(1);
+    ros::Rate r_(1);
+    
+
 
     
     // Lidar timestamp.csv path
     std::string LidarcsvPath = data_dir + "lidar_timestamp.csv";
     std::ifstream LidarcsvFile(LidarcsvPath, std::ifstream::in);
 
-    if(!LidarcsvFile.is_open()){
+    if(!LidarcsvFile.is_open())
+    {
         std::cout << " Lidar csv file failed to open " << std::endl;
         return EXIT_FAILURE;
     }
-    
-    // IMU csv data path
-    std::string IMUcsvPath = data_dir + "imu_data.csv";
-    std::ifstream IMUcsvFile(IMUcsvPath, std::ifstream::in);
-
-    if(!IMUcsvFile.is_open()){
-        std::cout << " IMU csv file failed to open " << std::endl;
-        return EXIT_FAILURE;
-    }
-
-    std::string IMUcsvline;
-    int IMUline_num_ = 0;
-
-    while(std::getline(IMUcsvFile, IMUcsvline))
-    {
-        if(IMUline_num_ == 0) 
-        {
-            IMUline_num_++;
-            continue;
-        }
-        
-        std::string IMUvalue;
-        std::vector<std::string> IMUvalues;
-        
-        // IMUvalues[0] -> Timestamp (ns)
-        // IMUvalues[1] -> Gyro_x
-        // IMUvalues[2] -> Gyro_y
-        // IMUvalues[3] -> Gyro_z
-        // IMUvalues[4] -> Acc_x
-        // IMUvalues[5] -> Acc_y
-        // IMUvalues[6] -> Acc_z
-
-        std::stringstream ss(IMUcsvline);
-        while(std::getline(ss, IMUvalue, ','))
-            IMUvalues.push_back(IMUvalue);
-        // std::cout << IMUline_num_ << "th    ";
-
-        std::vector<double> Gyro;
-        Gyro[0] = std::stod(IMUvalues[1]);
-        Gyro[1] = std::stod(IMUvalues[2]);
-        Gyro[2] = std::stod(IMUvalues[3]);
-        
-        // Eigen::Matrix3d Rotation = GyroToRotation(Gyro);
-
-
-
-        
-        std::cout << std::endl;
-        IMUline_num_++;
-    }
-    
+     
     std::string Lidarcsvline;
     int line_num = 0;
     
@@ -208,13 +144,9 @@ int main(int argc, char **argv)
             return EXIT_FAILURE;
         }        
 
-        pcl::PointCloud<pcl::PointXYZI> points;
-        // pcl::PointCloud<pcl::PointXYZ> points;
         
         const size_t kMaxNumberOfPoints = 1e6; 
         
-        points.clear();
-        points.reserve(kMaxNumberOfPoints);
         
         std::cout << " File number : " << fidx << "     " << std::endl;
         
@@ -227,6 +159,10 @@ int main(int argc, char **argv)
 
             
 
+            pcl::PointCloud<pcl::PointXYZI> points;
+            // pcl::PointCloud<pcl::PointXYZ> points;
+            points.clear();
+            points.reserve(kMaxNumberOfPoints);
             
             pcl::PointXYZI point;
             // pcl::PointXYZ point;
@@ -251,6 +187,7 @@ int main(int argc, char **argv)
 
             // IMU data publish
 
+            std::cout << lidar_data.timestamp_ns << std::endl;
             // save 3D points and intensity 
             for(int k = 0; k < num_pts * 3; k+=3)
             {
@@ -261,27 +198,28 @@ int main(int argc, char **argv)
                 points.push_back(point);
             }
             
+            std::cout << " points num :  " << points.size() << "    ";
 
-            std::cout << point << std::endl; 
+            // timestamp
+            ros::Time timestamp_ros;
+            timestamp_ros.fromNSec(lidar_data.timestamp_ns);
+            std::cout << timestamp_ros << std::endl;
 
+            // publish
+            sensor_msgs::PointCloud2 output;
+            pcl::toROSMsg(points, output);
+            output.header.stamp = timestamp_ros;
+            output.header.frame_id = "/camera_init";
+            LaserCloud.publish(output);
+        
+
+            r_.sleep();
         }
 
-        std::cout << " points num :  " << points.size() << "    ";
 
-        // timestamp
-        ros::Time timestamp_ros;
-        timestamp_ros.fromNSec(lidar_data.timestamp_ns);
-        std::cout << timestamp_ros << std::endl;
 
-        // publish
-        sensor_msgs::PointCloud2 output;
-        pcl::toROSMsg(points, output);
-        output.header.stamp = timestamp_ros;
-        output.header.frame_id = "/camera_init";
-        pubLaserCloud.publish(output);
             
-        // bagfile
-        if( to_bag ) bag.write("/velodyne_points", timestamp_ros, output);
+
 
 
         r.sleep();
@@ -291,17 +229,16 @@ int main(int argc, char **argv)
     }
 
     LidarcsvFile.close();
-    bag.close();
     
     printf("XYZ_binary to rosbag done\n");
-    
-  return 0;
+
+
+
+
+
+
+
+
+
+    return 0;
 }
-            
-
-             
-
-    
-
-
-
