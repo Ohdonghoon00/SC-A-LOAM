@@ -137,7 +137,44 @@ Eigen::Matrix4f gyroToRotation(std::vector<float> gyro)
     return RT;
 }
 
-void MoveDistortionPoints(pcl::PointCloud<pcl::PointXYZ> &points, std::vector<Eigen::Matrix4f> LidarRotation, int ScanStepNum, int LineNum)
+float ToAngle(Eigen::Matrix4f LidarRotation)
+{
+    float data[] = {    LidarRotation(0, 0), LidarRotation(0, 1), LidarRotation(0, 2),
+                        LidarRotation(1, 0), LidarRotation(1, 1), LidarRotation(1, 2),
+                        LidarRotation(2, 0), LidarRotation(2, 1), LidarRotation(2, 2)};
+
+    
+    cv::Mat rot(3, 3, CV_32FC1, data);
+    // cv::Mat r;
+    cv::Rodrigues(rot, rot);
+    float angle = sqrt( rot.at<float>(0, 0) * rot.at<float>(0, 0) + 
+                        rot.at<float>(1, 0) * rot.at<float>(1, 0) +
+                        rot.at<float>(2, 0) * rot.at<float>(2, 0) );
+
+    return angle;
+}
+
+Eigen::Vector3f ToAxis(Eigen::Matrix4f LidarRotation)
+{
+    float angle = ToAngle(LidarRotation);
+    float data[] = {    LidarRotation(0, 0), LidarRotation(0, 1), LidarRotation(0, 2),
+                        LidarRotation(1, 0), LidarRotation(1, 1), LidarRotation(1, 2),
+                        LidarRotation(2, 0), LidarRotation(2, 1), LidarRotation(2, 2)};
+
+    
+    cv::Mat rot(3, 3, CV_32FC1, data);
+    // cv::Mat r;
+    cv::Rodrigues(rot, rot);
+
+    Eigen::Vector3f Axis;
+    Axis << rot.at<float>(0, 0), rot.at<float>(1, 0), rot.at<float>(2, 0);
+    Axis = Axis / angle;
+
+    return Axis;
+
+}
+
+void MoveDistortionPoints(pcl::PointCloud<pcl::PointXYZ> &points, Eigen::Matrix4f LidarRotation, int ScanStepNum, int num_seqs)
 {
     int PointNum = points.size();
     Eigen::MatrixXf MatrixPoints(4, PointNum);
@@ -148,11 +185,25 @@ void MoveDistortionPoints(pcl::PointCloud<pcl::PointXYZ> &points, std::vector<Ei
         MatrixPoints(3, i) = 1.0;
     }
     
+    float angle = ToAngle(LidarRotation);
+    Eigen::Vector3f Axis = ToAxis(LidarRotation);
     
+    float ratio = (((float)(ScanStepNum + 1) / (float)num_seqs) * angle);
+    Axis = Axis * ratio;
     
-    int index = ScanStepNum / 4; 
-    
-    Eigen::Matrix4Xf MatrixPoints_ = LidarRotation[index + 20 * LineNum] * MatrixPoints;
+    float data[] = {Axis(0, 0), Axis(1, 0), Axis(2, 0)};
+    cv::Mat R(3, 1, CV_32FC1, data);
+    // cv::Mat r;
+    cv::Rodrigues(R, R);
+
+    Eigen::Matrix4f RT;
+    RT <<   R.at<float>(0, 0), R.at<float>(0, 1), R.at<float>(0, 2), 0,
+            R.at<float>(1, 0), R.at<float>(1, 1), R.at<float>(1, 2), 0,
+            R.at<float>(2, 0), R.at<float>(2, 1), R.at<float>(2, 2), 0,
+            0,                  0,                  0,              1;
+
+
+    Eigen::Matrix4Xf MatrixPoints_ = RT.inverse() * MatrixPoints;
     points.clear();
     for(int i = 0; i < PointNum; i++){
         pcl::PointXYZ Point;
@@ -213,61 +264,21 @@ int main(int argc, char **argv)
         return EXIT_FAILURE;
     }
 
-    std::string IMUcsvline;
-    int IMUline_num = 0;
-    std::vector<Eigen::Matrix4f> RT_LidarPoint;
-
-    while(std::getline(IMUcsvFile, IMUcsvline) && ros::ok())
-    {
-        if(IMUline_num == 0) 
-        {
-            IMUline_num++;
-            continue;
-        }
-        
-        std::string IMUvalue;
-        std::vector<std::string> IMUvalues;
-        
-        // IMUvalues[0] -> Timestamp (ns)
-        // IMUvalues[1] -> Gyro_x
-        // IMUvalues[2] -> Gyro_y
-        // IMUvalues[3] -> Gyro_z
-        // IMUvalues[4] -> Acc_x
-        // IMUvalues[5] -> Acc_y
-        // IMUvalues[6] -> Acc_z
-
-        std::stringstream ss(IMUcsvline);
-        while(std::getline(ss, IMUvalue, ','))
-            IMUvalues.push_back(IMUvalue);
-        std::cout << IMUline_num << "th    ";
-
-        std::cout << std::endl;
-
-        std::vector<float> Gyro;
-        Gyro.resize(3);
-        Gyro[0] = std::stof(IMUvalues[1]);
-        Gyro[1] = std::stof(IMUvalues[2]);
-        Gyro[2] = std::stof(IMUvalues[3]);
-        
-        Eigen::Matrix4f Rotation = gyroToRotation(Gyro);
-        // std::cout << Rotation << std::endl;
-        Eigen::Matrix4f RT_ = RigToIMU * Rotation * RigToIMU.inverse();
-        Eigen::Matrix4f RT = RigToLidar.inverse() * RT_ * RigToLidar;
-        RT_LidarPoint.push_back(RT);
-
-        std::cout << std::endl;
-        IMUline_num++;
-    }
-    
+    Eigen::Matrix4f LidarRotation;
     std::string Lidarcsvline;
-    int line_num = 0;
+    int Lidarline_num = 0;
+    int IMUline_num = 0;
+    Eigen::Matrix4f IMURotation_integral = Eigen::Matrix4f::Identity();
+
+
+    
     
     // read timestamp.csv
     while(std::getline(LidarcsvFile, Lidarcsvline) && ros::ok())
     {
-        if(line_num == 0) 
+        if(Lidarline_num == 0) 
         {
-            line_num++;
+            Lidarline_num++;
             continue;
         }
         std::string value;
@@ -283,7 +294,8 @@ int main(int argc, char **argv)
         while(std::getline(ss, value, ','))
             values.push_back(value);
         int fidx = std::stoi(values[2]);
-        
+        double LastScanTimestamp = std::stod(values[1]);
+
         // binary data path
         std::stringstream Lidar_binary_path;
         Lidar_binary_path << data_dir + "lidar/" << std::setfill('0') << std::setw(5) << fidx << ".xyz";
@@ -308,6 +320,61 @@ int main(int argc, char **argv)
         int num_seqs = 0;
         ifs.read((char*)&num_seqs, sizeof(int));
         std::cout << " num_seqs : " << num_seqs << std::endl;
+        
+        std::string IMUcsvline;
+
+        while(std::getline(IMUcsvFile, IMUcsvline) && ros::ok())
+        {
+            if(IMUline_num == 0) 
+            {
+                IMUline_num++;
+                continue;
+            }
+            
+            std::string IMUvalue;
+            std::vector<std::string> IMUvalues;
+            
+            // IMUvalues[0] -> Timestamp (ns)
+            // IMUvalues[1] -> Gyro_x
+            // IMUvalues[2] -> Gyro_y
+            // IMUvalues[3] -> Gyro_z
+            // IMUvalues[4] -> Acc_x
+            // IMUvalues[5] -> Acc_y
+            // IMUvalues[6] -> Acc_z
+
+            std::stringstream ss(IMUcsvline);
+            while(std::getline(ss, IMUvalue, ','))
+                IMUvalues.push_back(IMUvalue);
+            std::cout << " IMUline num : " << IMUline_num << "th    ";
+            
+            double IMUtimestamp = std::stod(IMUvalues[0]);
+            std::cout.precision(15);
+            std::cout << " IMU timestamp : " << IMUtimestamp << std::endl;
+
+            std::vector<float> Gyro;
+            Gyro.resize(3);
+            Gyro[0] = std::stof(IMUvalues[1]);
+            Gyro[1] = std::stof(IMUvalues[2]);
+            Gyro[2] = std::stof(IMUvalues[3]);
+            
+            Eigen::Matrix4f Rotation = gyroToRotation(Gyro);
+            
+            if(LastScanTimestamp > IMUtimestamp){
+                IMURotation_integral = Rotation * IMURotation_integral;
+            }
+            else{
+                Eigen::Matrix4f RT_ = RigToIMU * IMURotation_integral * RigToIMU.inverse();
+                Eigen::Matrix4f RT = RigToLidar.inverse() * RT_ * RigToLidar;
+                LidarRotation = RT;
+                IMURotation_integral = Rotation;
+                IMUline_num++;
+                break;
+            }
+            
+            std::cout << std::endl;
+            IMUline_num++;
+        }          
+        
         for (int j = 0; j < num_seqs; j++)
         {
 
@@ -334,21 +401,19 @@ int main(int argc, char **argv)
             ifs.read((char*) &lidar_data.num_channels, sizeof(uint8_t));
             ifs.read((char*) &lidar_data.timestamp_ns, sizeof(int64_t));
 
-            // IMU data publish
 
             // save 3D points and intensity 
-            for(int k = 0; k < num_pts * 3; k+=3)
-            {
+            for(int k = 0; k < num_pts * 3; k+=3){
                 point.x = *(lidar_data.points_ptr() + k);
                 point.y = *(lidar_data.points_ptr() + k + 1);
                 point.z = *(lidar_data.points_ptr() + k + 2);
                 // point.intensity = (((float)*( lidar_data.intensities_ptr() + (k/3) ) ) / 255); // 0 ~ 1 , raw data : 0 ~ 254
-                
                 Points.push_back(point);
             }
+                
+            // MoveDistortionPoints(Points, LidarRotation, j, num_seqs);
             
 
-            MoveDistortionPoints(Points, RT_LidarPoint, j, line_num);
             for(int i = 0; i < Points.size(); i ++){
                 pcl::PointXYZ NoDistortionPoint;
                 NoDistortionPoint.x = Points[i].x;
@@ -382,7 +447,7 @@ int main(int argc, char **argv)
         r.sleep();
         ifs.close();
         std::cout << std::endl;
-        line_num++;    
+        Lidarline_num++;    
     }
 
     LidarcsvFile.close();
