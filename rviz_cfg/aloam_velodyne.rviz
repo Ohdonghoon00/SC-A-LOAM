@@ -400,7 +400,7 @@ Visualization Manager:
       Unreliable: false
       Value: false
     - Alpha: 0.1
-      Autocompute Intensity Bounds: true
+      Autocompute Intensity Bounds: false
       Autocompute Value Bounds:
         Max Value: 10
         Min Value: -10
@@ -414,14 +414,14 @@ Visualization Manager:
       Enabled: true
       Invert Rainbow: false
       Max Color: 255; 255; 255
-      Max Intensity: 15.099973678588867
+      Max Intensity: 300
       Min Color: 0; 0; 0
       Min Intensity: 0.00020467743161134422
       Name: pgoMap
       Position Transformer: XYZ
       Queue Size: 1
       Selectable: true
-      Size (Pixels): 3
+      Size (Pixels): 2
       Size (m): 0.10000000149011612
       Style: Points
       Topic: /aft_pgo_map

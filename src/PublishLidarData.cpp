@@ -214,29 +214,33 @@ int main(int argc, char **argv)
     ros::NodeHandle nh("~");
     LidarData lidar_data;
     
-    // Extrinsic parameter rig - imu / rig - lidar
-    const Eigen::Matrix4f RigToIMU = To44RT(imu2rig_pose);
-    const Eigen::Matrix4f RigToLidar = To44RT(lidar2rig_pose);
-    
     // launch parameter
     rosbag::Bag bag;
     bool to_bag, ToUndistortionPoints;
-    std::string data_dir, output_bag_file;
+    std::string data_dir, output_bag_file, yaml_path;
     int publish_delay;
-    
-    
-    Eigen::Matrix4f LidarRotation;
-    Eigen::Matrix4f IMURotation_integral = Eigen::Matrix4f::Identity();
-    
     
     nh.getParam("data_dir", data_dir);
     nh.getParam("to_bag", to_bag);
     nh.getParam("ToUndistortionPoints", ToUndistortionPoints);
     nh.getParam("publish_delay", publish_delay);
     
+    // Read Yaml setting file
+
+
+    // Extrinsic parameter rig - imu / rig - lidar
+    const Eigen::Matrix4f RigToIMU = To44RT(imu2rig_pose);
+    const Eigen::Matrix4f RigToLidar = To44RT(lidar2rig_pose);
+    
+    
+    
+    Eigen::Matrix4f LidarRotation;
+    Eigen::Matrix4f IMURotation_integral = Eigen::Matrix4f::Identity();
+    
+    
+    
     // bagfile
-    if (to_bag)
-    {
+    if (to_bag){
         nh.getParam("output_bag_file", output_bag_file);
         bag.open(data_dir + output_bag_file, rosbag::bagmode::Write);
     }
@@ -344,11 +348,11 @@ int main(int argc, char **argv)
             std::stringstream ss(IMUcsvline);
             while(std::getline(ss, IMUvalue, ','))
                 IMUvalues.push_back(IMUvalue);
-            std::cout << " IMUline num : " << IMUline_num << "th    ";
+            // std::cout << " IMUline num : " << IMUline_num << "th    ";
             
             double IMUtimestamp = std::stod(IMUvalues[0]);
             std::cout.precision(15);
-            std::cout << " IMU timestamp : " << IMUtimestamp << std::endl;
+            // std::cout << " IMU timestamp : " << IMUtimestamp << std::endl;
 
             std::vector<float> Gyro;
             Gyro.resize(3);
@@ -413,7 +417,7 @@ int main(int argc, char **argv)
             if(ToUndistortionPoints) MoveDistortionPoints(Points, LidarRotation, j, num_seqs);
             
 
-            for(int i = 0; i < Points.size(); i ++){
+            for(size_t i = 0; i < Points.size(); i ++){
                 pcl::PointXYZ NoDistortionPoint;
                 NoDistortionPoint.x = Points[i].x;
                 NoDistortionPoint.y = Points[i].y;
