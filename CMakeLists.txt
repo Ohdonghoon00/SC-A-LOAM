@@ -78,4 +78,6 @@ target_link_libraries(PublishLidarData glog ${catkin_LIBRARIES} ${PCL_LIBRARIES}
 add_executable(VisualizePointCloud src/VisualizePointCloud.cpp)
 target_link_libraries(VisualizePointCloud glog ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${OpenCV_LIBS})
 
+add_executable(VisualizeKeyframePointcloud src/VisualizeKeyframePointcloud.cpp)
+target_link_libraries(VisualizeKeyframePointcloud glog ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${OpenCV_LIBS})
 

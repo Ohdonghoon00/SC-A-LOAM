@@ -1,0 +1,21 @@
+<launch>
+    
+   
+    
+    <node name="VisualizeKeyframePointcloud" pkg="aloam_velodyne" type="VisualizeKeyframePointcloud" output="screen"> 
+        <param name="data_dir" type="string" value="/home/multipleye/Dataset/201014_skt_lobby_day_lidar/" />   <!--replace with your data dir -->
+        <param name="publish_delay" type="int" value="2" />                                     <!-- 1 : 10hz , 2: 5hz -->
+    </node>
+    
+    
+    <!-- visulaization -->
+    <arg name="rviz" default="true" />
+    <group if="$(arg rviz)">
+        <node launch-prefix="nice" pkg="rviz" type="rviz" name="rviz1" args="-d $(find aloam_velodyne)/rviz_cfg/aloam_velodyne_visualize_undistortion.rviz" />
+        <node launch-prefix="nice" pkg="rviz" type="rviz" name="rviz2" args="-d $(find aloam_velodyne)/rviz_cfg/aloam_velodyne_visualize_distortion.rviz" />
+    </group>
+
+
+
+
+</launch>
