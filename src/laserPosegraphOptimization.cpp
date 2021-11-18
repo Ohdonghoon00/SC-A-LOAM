@@ -7,6 +7,11 @@
 #include <iostream>
 #include <string>
 #include <optional>
+#include <fstream>
+
+#include "opencv2/opencv.hpp"
+#include <opencv2/core.hpp>
+#include <opencv2/highgui/highgui.hpp>
 
 #include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
@@ -134,17 +139,38 @@ std::string pgKITTIformat, pgScansDirectory;
 std::string odomKITTIformat;
 std::fstream pgTimeSaveStream;
 
+std::string PosePath("/home/multipleye/Dataset/Lidar_pose.txt");
+std::ofstream file(PosePath);
+
 std::string padZeros(int val, int num_digits = 6) {
   std::ostringstream out;
   out << std::internal << std::setfill('0') << std::setw(num_digits) << val;
   return out.str();
 }
 
+
 gtsam::Pose3 Pose6DtoGTSAMPose3(const Pose6D& p)
 {
     return gtsam::Pose3( gtsam::Rot3::RzRyRx(p.roll, p.pitch, p.yaw), gtsam::Point3(p.x, p.y, p.z) );
 } // Pose6DtoGTSAMPose3
 
+void SaveLidarPose(std::string file_, Pose6D pose_, int time)
+{
+    // std::ofstream file(file_);
+    gtsam::Pose3 pose = Pose6DtoGTSAMPose3(pose_);
+    Point3 t = pose.translation();
+    Rot3 R_ = pose.rotation();    
+    auto col1 = R_.column(1); // Point3
+    auto col2 = R_.column(2); // Point3
+    auto col3 = R_.column(3); // Point3
+    double data[] = {    col1.x(), col2.x(), col3.x(), 
+                        col1.y(), col2.y(), col3.y(), 
+                        col1.z(), col2.z(), col3.z()};
+    cv::Mat R(3, 3, CV_64FC1, data);
+    std::cout << R << std::endl;
+    cv::Rodrigues(R, R);
+    file << R.at<double>(0, 0) << " " << R.at<double>(1, 0) << " " << R.at<double>(2, 0) << " " << t.x() << " " << t.y() << " " << t.z() << " " << keyframeTimes.at(time) << std::endl;
+}
 void saveOdometryVerticesKITTIformat(std::string _filename)
 {
     // ref from gtsam's original code "dataset.cpp"
@@ -300,7 +326,6 @@ void pubPath( void )
     {
         const Pose6D& pose_est = keyframePosesUpdated.at(node_idx); // upodated poses
         // const gtsam::Pose3& pose_est = isamCurrentEstimate.at<gtsam::Pose3>(node_idx);
-
         nav_msgs::Odometry odomAftPGOthis;
         odomAftPGOthis.header.frame_id = "/camera_init";
         odomAftPGOthis.child_frame_id = "/aft_pgo";
@@ -699,7 +724,7 @@ void process_icp(void)
     }
 } // process_icp
 
-void process_viz_path(void)
+void process_viz_path()
 {
     float hz = 10.0; 
     ros::Rate rate(hz);
@@ -781,6 +806,10 @@ int main(int argc, char **argv)
     pgScansDirectory = save_directory + "Scans/";
     auto unused = system((std::string("exec rm -r ") + pgScansDirectory).c_str());
     unused = system((std::string("sudo mkdir -p ") + pgScansDirectory).c_str());
+
+
+    
+
 
 	nh.param<double>("keyframe_meter_gap", keyframeMeterGap, 2.0); // pose assignment every k m move 
 	nh.param<double>("keyframe_deg_gap", keyframeDegGap, 10.0); // pose assignment every k deg rot 

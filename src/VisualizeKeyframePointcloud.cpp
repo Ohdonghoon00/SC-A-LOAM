@@ -509,7 +509,7 @@ int main(int argc, char **argv)
                 }
                 
                 // std::cout << " before moving " << points[0] << std::endl;
-                // MoveDistortionPoints(points, LidarRotation, j, num_seqs);
+                MoveDistortionPoints(points, LidarRotation, j, num_seqs);
                 // std::cout << " after moving " << points[0] << std::endl;
                 
                 for(size_t i = 0; i < points.size(); i++){
@@ -538,9 +538,11 @@ int main(int argc, char **argv)
             pcl::toROSMsg(VisualizeNoDistortionPoints, output);
             output.header.stamp = timestamp_ros;
             output.header.frame_id = "/camera_init";
-            LaserCloudNoDistortion.publish(output);
+            // LaserCloudNoDistortion.publish(output);
             
             if(KeyframeTimestamp < LastScanTimestamp){
+                VisualizeKeyframeLidarPoints.clear();
+
                 MovePointsToKeyframe(KeyframeLidarPoints, KeyframePose);
                 std::cout << "Visualize Keyframe Pointcloud!" << std::endl;
                 for(size_t i = 0; i < KeyframeLidarPoints.size(); i++){

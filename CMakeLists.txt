@@ -65,7 +65,7 @@ target_compile_options(alaserPGO
 )
 target_link_libraries(alaserPGO 
   ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${CERES_LIBRARIES}
-  ${OpenMP_CXX_FLAGS}
+  ${OpenMP_CXX_FLAGS} ${OpenCV_LIBS}
   gtsam
 )
 # target_link_libraries( alaserPGO ${Boost_PROGRAM_OPTIONS_LIBRARY} ${Boost_REGEX_LIBRARY} )
@@ -81,3 +81,10 @@ target_link_libraries(VisualizePointCloud glog ${catkin_LIBRARIES} ${PCL_LIBRARI
 add_executable(VisualizeKeyframePointcloud src/VisualizeKeyframePointcloud.cpp)
 target_link_libraries(VisualizeKeyframePointcloud glog ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${OpenCV_LIBS})
 
+# test 
+add_executable(PublishLidarData2 src/PublishLidarData2.cpp)
+target_link_libraries(PublishLidarData2 glog ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${OpenCV_LIBS})
+
+# Save Data
+add_executable(SaveData src/SaveData.cpp)
+target_link_libraries(SaveData glog ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${OpenCV_LIBS})
