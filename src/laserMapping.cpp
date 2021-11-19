@@ -899,6 +899,8 @@ void process()
 			br.sendTransform(tf::StampedTransform(transform, odomAftMapped.header.stamp, "/camera_init", "/aft_mapped"));
 
 			frameCount++;
+			std::cout << frameCount << std::endl;
+			std::cout << t_w_curr.x() << "	" << t_w_curr.y() << "	" << t_w_curr.z() << std::endl;
 		}
 		std::chrono::milliseconds dura(2);
         std::this_thread::sleep_for(dura);

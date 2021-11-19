@@ -72,6 +72,8 @@ double keyframeDegGap, keyframeRadGap;
 double translationAccumulated = 1000000.0; // large value means must add the first given frame.
 double rotaionAccumulated = 1000000.0; // large value means must add the first given frame.
 
+int frameCount = 0;
+
 bool isNowKeyFrame = false; 
 
 Pose6D odom_pose_prev {0.0, 0.0, 0.0, 0.0, 0.0, 0.0}; // init 
@@ -134,13 +136,13 @@ ros::Publisher pubMapAftPGO, pubOdomAftPGO, pubPathAftPGO;
 ros::Publisher pubLoopScanLocal, pubLoopSubmapLocal;
 ros::Publisher pubOdomRepubVerifier;
 
-std::string save_directory;
+std::string save_directory, SlamPosePath, data_dir;
 std::string pgKITTIformat, pgScansDirectory;
 std::string odomKITTIformat;
 std::fstream pgTimeSaveStream;
+std::vector<double> Cameratimestamps;
 
-std::string PosePath("/home/multipleye/Dataset/Lidar_pose.txt");
-std::ofstream file(PosePath);
+
 
 std::string padZeros(int val, int num_digits = 6) {
   std::ostringstream out;
@@ -154,23 +156,25 @@ gtsam::Pose3 Pose6DtoGTSAMPose3(const Pose6D& p)
     return gtsam::Pose3( gtsam::Rot3::RzRyRx(p.roll, p.pitch, p.yaw), gtsam::Point3(p.x, p.y, p.z) );
 } // Pose6DtoGTSAMPose3
 
-void SaveLidarPose(std::string file_, Pose6D pose_, int time)
+Eigen::Vector3f Rot3ToVector3f(Rot3 r)
 {
-    // std::ofstream file(file_);
-    gtsam::Pose3 pose = Pose6DtoGTSAMPose3(pose_);
-    Point3 t = pose.translation();
-    Rot3 R_ = pose.rotation();    
-    auto col1 = R_.column(1); // Point3
-    auto col2 = R_.column(2); // Point3
-    auto col3 = R_.column(3); // Point3
-    double data[] = {    col1.x(), col2.x(), col3.x(), 
-                        col1.y(), col2.y(), col3.y(), 
-                        col1.z(), col2.z(), col3.z()};
-    cv::Mat R(3, 3, CV_64FC1, data);
-    std::cout << R << std::endl;
-    cv::Rodrigues(R, R);
-    file << R.at<double>(0, 0) << " " << R.at<double>(1, 0) << " " << R.at<double>(2, 0) << " " << t.x() << " " << t.y() << " " << t.z() << " " << keyframeTimes.at(time) << std::endl;
+    auto col1 = r.column(1); 
+    auto col2 = r.column(2); 
+    auto col3 = r.column(3);
+
+    float data[] = {  (float)col1.x(), (float)col2.x(), (float)col3.x(),
+                    (float)col1.y(), (float)col2.y(), (float)col3.y(),
+                    (float)col1.z(), (float)col2.z(), (float)col3.z()};
+
+    cv::Mat Rotation(3, 3, CV_32FC1, data);
+    cv::Rodrigues(Rotation, Rotation);
+
+    Eigen::Vector3f R;
+    R << Rotation.at<float>(0, 0), Rotation.at<float>(1, 0), Rotation.at<float>(2, 0);
+
+    return R;
 }
+
 void saveOdometryVerticesKITTIformat(std::string _filename)
 {
     // ref from gtsam's original code "dataset.cpp"
@@ -179,13 +183,16 @@ void saveOdometryVerticesKITTIformat(std::string _filename)
         gtsam::Pose3 pose = Pose6DtoGTSAMPose3(_pose6d);
         Point3 t = pose.translation();
         Rot3 R = pose.rotation();
-        auto col1 = R.column(1); // Point3
-        auto col2 = R.column(2); // Point3
-        auto col3 = R.column(3); // Point3
+        // auto col1 = R.column(1); // Point3
+        // auto col2 = R.column(2); // Point3
+        // auto col3 = R.column(3); // Point3
 
-        stream << col1.x() << " " << col2.x() << " " << col3.x() << " " << t.x() << " "
-               << col1.y() << " " << col2.y() << " " << col3.y() << " " << t.y() << " "
-               << col1.z() << " " << col2.z() << " " << col3.z() << " " << t.z() << std::endl;
+        // stream << col1.x() << " " << col2.x() << " " << col3.x() << " " << t.x() << " "
+        //        << col1.y() << " " << col2.y() << " " << col3.y() << " " << t.y() << " "
+        //        << col1.z() << " " << col2.z() << " " << col3.z() << " " << t.z() << std::endl;
+
+        Eigen::Vector3f r = Rot3ToVector3f(R);
+        // stream << r(0) << " " << r(1) << " " << r(2) << " " << t.x() << " " << t.y() << " " << t.z() << std::endl;
     }
 }
 
@@ -204,13 +211,16 @@ void saveOptimizedVerticesKITTIformat(gtsam::Values _estimates, std::string _fil
 
         Point3 t = pose.translation();
         Rot3 R = pose.rotation();
-        auto col1 = R.column(1); // Point3
-        auto col2 = R.column(2); // Point3
-        auto col3 = R.column(3); // Point3
+        // auto col1 = R.column(1); // Point3
+        // auto col2 = R.column(2); // Point3
+        // auto col3 = R.column(3); // Point3
 
-        stream << col1.x() << " " << col2.x() << " " << col3.x() << " " << t.x() << " "
-               << col1.y() << " " << col2.y() << " " << col3.y() << " " << t.y() << " "
-               << col1.z() << " " << col2.z() << " " << col3.z() << " " << t.z() << std::endl;
+        // stream << col1.x() << " " << col2.x() << " " << col3.x() << " " << t.x() << " "
+        //        << col1.y() << " " << col2.y() << " " << col3.y() << " " << t.y() << " "
+        //        << col1.z() << " " << col2.z() << " " << col3.z() << " " << t.z() << std::endl;
+
+        Eigen::Vector3f r = Rot3ToVector3f(R);
+        // stream << r(0) << " " << r(1) << " " << r(2) << " " << t.x() << " " << t.y() << " " << t.z() << std::endl;
     }
 }
 
@@ -653,7 +663,6 @@ void process_pg()
         // ps. 
         // scan context detector is running in another thread (in constant Hz, e.g., 1 Hz)
         // pub path and point cloud in another thread
-
         // wait (must required for running the while loop)
         std::chrono::milliseconds dura(2);
         std::this_thread::sleep_for(dura);
@@ -797,7 +806,8 @@ int main(int argc, char **argv)
 {
 	ros::init(argc, argv, "laserPGO");
 	ros::NodeHandle nh;
-
+    
+    nh.getParam("data_dir", data_dir);
 	nh.param<std::string>("save_directory", save_directory, "/"); // pose assignment every k m move 
     pgKITTIformat = save_directory + "optimized_poses.txt";
     odomKITTIformat = save_directory + "odom_poses.txt";
@@ -807,11 +817,10 @@ int main(int argc, char **argv)
     auto unused = system((std::string("exec rm -r ") + pgScansDirectory).c_str());
     unused = system((std::string("sudo mkdir -p ") + pgScansDirectory).c_str());
 
-
     
 
-
-	nh.param<double>("keyframe_meter_gap", keyframeMeterGap, 2.0); // pose assignment every k m move 
+	
+    nh.param<double>("keyframe_meter_gap", keyframeMeterGap, 2.0); // pose assignment every k m move 
 	nh.param<double>("keyframe_deg_gap", keyframeDegGap, 10.0); // pose assignment every k deg rot 
     keyframeRadGap = deg2rad(keyframeDegGap);
 

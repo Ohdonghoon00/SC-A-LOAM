@@ -88,3 +88,7 @@ target_link_libraries(PublishLidarData2 glog ${catkin_LIBRARIES} ${PCL_LIBRARIES
 # Save Data
 add_executable(SaveData src/SaveData.cpp)
 target_link_libraries(SaveData glog ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${OpenCV_LIBS})
+
+# Visualize Pose
+add_executable(VisualizePose src/VisualizePose.cpp)
+target_link_libraries(VisualizePose glog ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${OpenCV_LIBS})
