@@ -87,7 +87,7 @@ int main(int argc, char** argv)
     
 
     while(ros::ok()){
-        ros::Rate rate(5);
+        ros::Rate rate(10);
         ros::spin();
         rate.sleep();
     }
