@@ -159,6 +159,21 @@ void laserCloudHandler(const sensor_msgs::PointCloud2ConstPtr &laserCloudMsg)
     int count = cloudSize;
     PointType point;
     std::vector<pcl::PointCloud<PointType>> laserCloudScans(N_SCANS);
+    
+    std::vector<float> Verticalangles;
+    for(int i = 0; i < cloudSize; i++){
+        
+        point.x = laserCloudIn.points[i].x;
+        point.y = laserCloudIn.points[i].y;
+        point.z = laserCloudIn.points[i].z;        
+        float angle = atan(point.z / sqrt(point.x * point.x + point.y * point.y)) * 180 / M_PI;
+        Verticalangles.push_back(angle);
+    }
+    
+    float MaxAngle = *max_element(Verticalangles.begin(), Verticalangles.end());
+    float MinAngle = *min_element(Verticalangles.begin(), Verticalangles.end());
+    float Ratio = (MaxAngle - MinAngle) / N_SCANS;
+
     for (int i = 0; i < cloudSize; i++)
     {
         point.x = laserCloudIn.points[i].x;
@@ -167,55 +182,63 @@ void laserCloudHandler(const sensor_msgs::PointCloud2ConstPtr &laserCloudMsg)
 
         float angle = atan(point.z / sqrt(point.x * point.x + point.y * point.y)) * 180 / M_PI;
         int scanID = 0;
+        
+        for(int j = 0; j < N_SCANS; j++){
+            if(angle < MinAngle + Ratio * (j + 1)){
+                scanID = j;
+                break;
+                
+            }
+        }
 
-        if (LIDAR_TYPE == "VLP16" && N_SCANS == 16)
-        {
-            scanID = int((angle + 15) / 2 + 0.5);
-            if (scanID > (N_SCANS - 1) || scanID < 0)
-            {
-                count--;
-                continue;
-            }
-        }
-        else if (LIDAR_TYPE == "HDL32" && N_SCANS == 32)
-        {
-            scanID = int((angle + 92.0/3.0) * 3.0 / 4.0);
-            if (scanID > (N_SCANS - 1) || scanID < 0)
-            {
-                count--;
-                continue;
-            }
-        }
-        // HDL64 (e.g., KITTI)
-        else if (LIDAR_TYPE == "HDL64" && N_SCANS == 64)
-        {   
-            if (angle >= -8.83)
-                scanID = int((2 - angle) * 3.0 + 0.5);
-            else
-                scanID = N_SCANS / 2 + int((-8.83 - angle) * 2.0 + 0.5);
+        // if (LIDAR_TYPE == "VLP16" && N_SCANS == 16)
+        // {
+        //     scanID = int((angle + 15) / 2 + 0.5);
+        //     if (scanID > (N_SCANS - 1) || scanID < 0)
+        //     {
+        //         count--;
+        //         continue;
+        //     }
+        // }
+        // else if (LIDAR_TYPE == "HDL32" && N_SCANS == 32)
+        // {
+        //     scanID = int((angle + 92.0/3.0) * 3.0 / 4.0);
+        //     if (scanID > (N_SCANS - 1) || scanID < 0)
+        //     {
+        //         count--;
+        //         continue;
+        //     }
+        // }
+        // // HDL64 (e.g., KITTI)
+        // else if (LIDAR_TYPE == "HDL64" && N_SCANS == 64)
+        // {   
+        //     if (angle >= -8.83)
+        //         scanID = int((2 - angle) * 3.0 + 0.5);
+        //     else
+        //         scanID = N_SCANS / 2 + int((-8.83 - angle) * 2.0 + 0.5);
 
-            // use [0 50]  > 50 remove outlies 
-            if (angle > 2 || angle < -24.33 || scanID > 50 || scanID < 0)
-            {
-                count--;
-                continue;
-            }
-        }
-        // Ouster OS1-64 (e.g., MulRan)
-        else if (LIDAR_TYPE == "OS1-64" && N_SCANS == 64)
-        {   
-            scanID = int((angle + 22.5) / 2 + 0.5); // ouster os1-64 vfov is [-22.5, 22.5] see https://ouster.com/products/os1-lidar-sensor/
-            if (scanID > (N_SCANS - 1) || scanID < 0)
-            {
-                count--;
-                continue;
-            }
-        }
-        else
-        {
-            //printf("wrong scan number\n");
-            ROS_BREAK();
-        }
+        //     // use [0 50]  > 50 remove outlies 
+        //     if (angle > 2 || angle < -24.33 || scanID > 50 || scanID < 0)
+        //     {
+        //         count--;
+        //         continue;
+        //     }
+        // }
+        // // Ouster OS1-64 (e.g., MulRan)
+        // else if (LIDAR_TYPE == "OS1-64" && N_SCANS == 64)
+        // {   
+        //     scanID = int((angle + 22.5) / 2 + 0.5); // ouster os1-64 vfov is [-22.5, 22.5] see https://ouster.com/products/os1-lidar-sensor/
+        //     if (scanID > (N_SCANS - 1) || scanID < 0)
+        //     {
+        //         count--;
+        //         continue;
+        //     }
+        // }
+        // else
+        // {
+        //     //printf("wrong scan number\n");
+        //     ROS_BREAK();
+        // }
         ////printf("angle %f scanID %d \n", angle, scanID);
 
         float ori = -atan2(point.y, point.x);
@@ -428,7 +451,7 @@ void laserCloudHandler(const sensor_msgs::PointCloud2ConstPtr &laserCloudMsg)
     laserCloudOutMsg.header.stamp = laserCloudMsg->header.stamp;
     laserCloudOutMsg.header.frame_id = "/camera_init";
     pubLaserCloud.publish(laserCloudOutMsg);
-
+    
     sensor_msgs::PointCloud2 cornerPointsSharpMsg;
     pcl::toROSMsg(cornerPointsSharp, cornerPointsSharpMsg);
     cornerPointsSharpMsg.header.stamp = laserCloudMsg->header.stamp;
