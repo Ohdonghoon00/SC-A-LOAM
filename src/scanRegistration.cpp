@@ -432,6 +432,7 @@ void laserCloudHandler(const sensor_msgs::PointCloud2ConstPtr &laserCloudMsg)
                     surfPointsLessFlatScan->push_back(laserCloud->points[k]);
                 }
             }
+
         }
 
         pcl::PointCloud<PointType> surfPointsLessFlatScanDS;

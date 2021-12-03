@@ -32,9 +32,9 @@
 
     <!-- nodes -->
     <node pkg="aloam_velodyne" type="ascanRegistration" name="ascanRegistration" output="screen" />
-    <node pkg="aloam_velodyne" type="alaserOdometry" name="alaserOdometry" output="screen" />
+    <!-- <node pkg="aloam_velodyne" type="alaserOdometry" name="alaserOdometry" output="screen" />
     <node pkg="aloam_velodyne" type="alaserMapping" name="alaserMapping" output="screen" />
-    <node pkg="aloam_velodyne" type="alaserPGO" name="alaserPGO" output="screen" /> <!--SC-A-LOAM-->
+    <node pkg="aloam_velodyne" type="alaserPGO" name="alaserPGO" output="screen" /> SC-A-LOAM -->
 
     <!-- visulaization -->
     <arg name="rviz" default="true" />
