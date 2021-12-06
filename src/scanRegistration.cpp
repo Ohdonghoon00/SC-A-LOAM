@@ -445,8 +445,13 @@ void laserCloudHandler(const sensor_msgs::PointCloud2ConstPtr &laserCloudMsg)
     }
     //printf("sort q time %f \n", t_q_sort);
     //printf("seperate points time %f \n", t_pts.toc());
-
-
+std::cout << " point size : " << std::endl;
+std::cout << laserCloud->size() << std::endl;
+std::cout << cornerPointsSharp.size() << std::endl;
+std::cout << cornerPointsLessSharp.size() << std::endl;
+std::cout << surfPointsFlat.size() << std::endl;
+std::cout << surfPointsLessFlat.size() << std::endl;
+    
     sensor_msgs::PointCloud2 laserCloudOutMsg;
     pcl::toROSMsg(*laserCloud, laserCloudOutMsg);
     laserCloudOutMsg.header.stamp = laserCloudMsg->header.stamp;

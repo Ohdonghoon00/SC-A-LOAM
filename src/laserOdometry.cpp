@@ -293,7 +293,10 @@ int main(int argc, char **argv)
                     pcl::PointXYZI pointSel;
                     std::vector<int> pointSearchInd;
                     std::vector<float> pointSearchSqDis;
-
+std::vector<Eigen::Matrix3Xd> a;
+for(int i = 0; i < a.size(); i++){
+    a[i].col()
+}
                     TicToc t_data;
                     // find correspondence for corner features
                     for (int i = 0; i < cornerPointsSharpNum; ++i)
