@@ -275,8 +275,11 @@ void laserCloudHandler(const sensor_msgs::PointCloud2ConstPtr &laserCloudMsg)
         point.intensity = scanID + scanPeriod * relTime;
         laserCloudScans[scanID].push_back(point); 
     }
-    
-    cloudSize = count;
+      for(int i = 0; i < N_SCANS; i++){
+        std::cout << laserCloudScans[i].size() << "  ";
+    }
+    std::cout << std::endl;
+    cloudSize = count;  
     //printf("points size %d \n", cloudSize);
 
     pcl::PointCloud<PointType>::Ptr laserCloud(new pcl::PointCloud<PointType>());
@@ -285,6 +288,7 @@ void laserCloudHandler(const sensor_msgs::PointCloud2ConstPtr &laserCloudMsg)
         scanStartInd[i] = laserCloud->size() + 5;
         *laserCloud += laserCloudScans[i];
         scanEndInd[i] = laserCloud->size() - 6;
+        std::cout << " start index : " << scanStartInd[i] << " end index : " << scanEndInd[i] << std::endl;
     }
 
     //printf("prepare time %f \n", t_prepare.toc());
@@ -300,7 +304,6 @@ void laserCloudHandler(const sensor_msgs::PointCloud2ConstPtr &laserCloudMsg)
         cloudNeighborPicked[i] = 0;
         cloudLabel[i] = 0;
     }
-
 
     TicToc t_pts;
 
@@ -445,12 +448,12 @@ void laserCloudHandler(const sensor_msgs::PointCloud2ConstPtr &laserCloudMsg)
     }
     //printf("sort q time %f \n", t_q_sort);
     //printf("seperate points time %f \n", t_pts.toc());
-std::cout << " point size : " << std::endl;
-std::cout << laserCloud->size() << std::endl;
-std::cout << cornerPointsSharp.size() << std::endl;
-std::cout << cornerPointsLessSharp.size() << std::endl;
-std::cout << surfPointsFlat.size() << std::endl;
-std::cout << surfPointsLessFlat.size() << std::endl;
+// std::cout << " point size : " << std::endl;
+// std::cout << laserCloud->size() << std::endl;
+// std::cout << cornerPointsSharp.size() << std::endl;
+// std::cout << cornerPointsLessSharp.size() << std::endl;
+// std::cout << surfPointsFlat.size() << std::endl;
+// std::cout << surfPointsLessFlat.size() << std::endl;
     
     sensor_msgs::PointCloud2 laserCloudOutMsg;
     pcl::toROSMsg(*laserCloud, laserCloudOutMsg);
